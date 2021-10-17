@@ -43,13 +43,18 @@ def greedy_algorithm(cities, amount_of_cities):
             length += distance
             order.append(index_next)
 
-            if length < best_length:
-                best_length = length
-                best_order = order
+        distance = distance_squared(start, cities[order[amount_of_cities-1]])
+        length += distance
+        order.append(index_start)
+
+        if length < best_length:
+            best_length = length
+            best_order = order
 
         # Uncomment below
         # print("Try #%d" % index_start)
         # print(order)
+        # print(length)
         # print()
 
     return best_order, best_length
