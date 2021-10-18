@@ -1,10 +1,13 @@
-def import_data(filename):
+def import_data():
     """
-    import_data(filename: str) -> tuple, int
+    import_data() -> tuple, int
     """
 
+    # <filename> has to be in tests/ folder
+    filename = input("Read data from: ")
+
     cities = list()
-    with open(filename, 'r') as data_file:
+    with open('tests/' + filename, 'r') as data_file:
         amount_of_cities = int(data_file.readline())
         for line in data_file:
             current_city = line.split()
