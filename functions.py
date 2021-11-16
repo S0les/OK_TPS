@@ -1,6 +1,6 @@
 def import_data():
     """
-    import_data() -> tuple, int
+    import_data() -> list[tuple[float, float]], int
     """
 
     # <filename> has to be in tests/ folder
@@ -12,18 +12,19 @@ def import_data():
         for line in data_file:
             current_city = line.split()
             cities.append((float(current_city[1]), float(current_city[2])))
-    return tuple(cities), amount_of_cities
+    return cities, amount_of_cities
 
 
 def greedy_algorithm(cities, amount_of_cities):
     """
-    greedy_algorithm(cities: tuple, amount_of_cities: int) -> list, int
+    greedy_algorithm(cities: list[tuple[float, float]],
+                        amount_of_cities: int) -> list, int
 
     Implementation of greedy algorithm for TPS problem.
 
     In order to see every single path, uncomment the #print in the while loop.
 
-    cities: ((float, float), (float, float))
+    cities: [(float, float), (float, float)]
 
     Returns the best path and its length
     """
@@ -65,7 +66,8 @@ def greedy_algorithm(cities, amount_of_cities):
 
 def get_closest(city, cities, visited):
     """
-    get_closest(city: tuple, cities: tuple, visited: list) -> int, tuple, float
+    get_closest(city: tuple, cities: list[tuple[float, float]],
+                    visited: list[int]) -> int, tuple, float
 
 
     A function to choose the closest neighbour city.
@@ -101,7 +103,8 @@ def get_closest(city, cities, visited):
 
 def distance_squared(city_a, city_b):
     """
-    distance_squared(city_a: tuple, city_b: tuple) -> float
+    distance_squared(city_a: tuple[float, float],
+                        city_b: tuple[float, float]) -> float
 
     A function to calculate distance between two nodes.
 
