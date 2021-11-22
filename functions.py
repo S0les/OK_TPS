@@ -1,3 +1,5 @@
+from math import sqrt
+
 def import_data():
     """
     import_data() -> list[tuple[float, float]], int
@@ -122,4 +124,4 @@ def distance_squared(city_a, city_b):
 
     square_distance = leg_a ** 2 + leg_b ** 2
 
-    return square_distance
+    return sqrt(square_distance)
