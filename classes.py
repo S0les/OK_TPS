@@ -97,7 +97,7 @@ class SimulatedAnnealing(Solver):
             order.append(order[0])
             cities = [self.cities[i] for i in order]
             cities_x, cities_y = zip(*cities)
-            plt.plot(cities_x, cities_y)
+            plt.plot(cities_x, cities_y, marker='o', markerfacecolor='indianred')
 
         return
 
