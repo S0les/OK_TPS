@@ -1,22 +1,5 @@
 from math import sqrt
 
-def import_data():
-    """
-    import_data() -> list[tuple[float, float]], int
-    """
-
-    # <filename> has to be in tests/ folder
-    filename = input("Read data from: ")
-
-    cities = list()
-    with open('tests/' + filename, 'r') as data_file:
-        amount_of_cities = int(data_file.readline())
-        for line in data_file:
-            current_city = line.split()
-            cities.append((float(current_city[1]), float(current_city[2])))
-    return cities, amount_of_cities
-
-
 def greedy_algorithm(cities, amount_of_cities):
     """
     greedy_algorithm(cities: list[tuple[float, float]],

@@ -12,13 +12,42 @@ from matplotlib.animation import FuncAnimation
 
 class Solver(ABC):
 
-    def __init__(self, cities: list[tuple[float, float]]) -> "Solver":
-        self.cities = cities
-        self.n = len(cities)
+    def __init__(self) -> "Solver":
+        self.cities = list()
+        self.n = 0
+        self.order = list()
+        self.adj = list()
+
+    def import_data(self, filename: str) -> None:
+        """
+        Import cities from file and initialize them.
+
+        Structure of file is next:
+            amount_of_cities
+            1 X1 Y1
+            2 X2 Y2
+            ...
+            n Xn Yn
+
+        @param filename: name of the file placed in tests/ folder
+        @return None
+        """
+
+        with open('tests/' + filename, 'r') as data_file:
+            data_file.readline()
+            for line in data_file:
+                current_city = line.split()
+                current_city = (float(current_city[1]), float(current_city[2]))
+                if current_city not in self.cities:
+                    self.cities.append(current_city)
+                    self.n += 1
+
         self.order = list(range(self.n))
         self.adj = [
-            [dist(i, j) if i != j else 0 for i in cities] for j in cities
+            [dist(i, j) if i != j else 0 for i in self.cities]
+            for j in self.cities
         ]
+        return
 
     def get_total_dist(self, order: list[int]) -> float:
         """
@@ -69,9 +98,9 @@ class SimulatedAnnealing(Solver):
     Solver using the simmulated annealing algorithm
     """
 
-    def __init__(self, cities, temperature: float = 100,
+    def __init__(self, temperature: float = 100,
                  cooling_rate: float = 0.999):
-        super().__init__(cities)
+        super().__init__()
         shuffle(self.order)
         self.temperature = temperature
         self.cooling_rate = cooling_rate
@@ -117,6 +146,9 @@ class SimulatedAnnealing(Solver):
         Continue cooling and finding distance until the optimal distance has
         not changed after self.max_repeats iterations
         """
+
+        if not self.cities:
+            return
 
         repeat = 0
         lowest_dist = float("inf")
@@ -197,4 +229,3 @@ class SimulatedAnnealing(Solver):
 
         self.order = (self.order[:a + 1] + self.order[b:a:-1]
                       + self.order[b + 1:])
-
