@@ -1,4 +1,4 @@
-from math import sqrt
+from math import dist
 
 def greedy_algorithm(cities, amount_of_cities):
     """
@@ -16,24 +16,25 @@ def greedy_algorithm(cities, amount_of_cities):
 
     best_order = list()
     best_length = float('inf')
+    adj = [
+        [dist(i, j) if i != j else 0 for i in cities] for j in cities
+    ]
 
-    for index_start, start in enumerate(cities):
+    for index_start in range(amount_of_cities):
 
         order = [index_start]
+        not_visited = [x for x in range(amount_of_cities)
+                       if x != index_start]
         length = 0
-
-        index_next, next_city, distance = get_closest(start, cities, order)
-        length += distance
-        order.append(index_next)
+        start = index_start
 
         while len(order) < amount_of_cities:
-            index_next, next_city, distance = get_closest(next_city,
-                                                          cities, order)
+            start, distance = get_closest(start, adj, not_visited)
             length += distance
-            order.append(index_next)
+            order.append(start)
+            not_visited.remove(start)
 
-        distance = distance_squared(start, cities[order[amount_of_cities-1]])
-        length += distance
+        length += adj[index_start][order[-1]]
         order.append(index_start)
 
         if length < best_length:
@@ -49,10 +50,9 @@ def greedy_algorithm(cities, amount_of_cities):
     return best_order, best_length
 
 
-def get_closest(city, cities, visited):
+def get_closest(city, adj, not_visited):
     """
-    get_closest(city: tuple, cities: list[tuple[float, float]],
-                    visited: list[int]) -> int, tuple, float
+    get_closest(city: int, visited: list[int]) -> int, tuple, float
 
 
     A function to choose the closest neighbour city.
@@ -73,38 +73,12 @@ def get_closest(city, cities, visited):
 
     best_distance = float('inf')
 
-    for i, c in enumerate(cities):
+    for i in not_visited:
 
-        if i not in visited:
-            distance = distance_squared(city, c)
+        distance = adj[city][i]
 
-            if distance < best_distance:
-                closest_city = c
-                index_closest_city = i
-                best_distance = distance
+        if distance < best_distance:
+            closest_city = i
+            best_distance = distance
 
-    return index_closest_city, closest_city, best_distance
-
-
-def distance_squared(city_a, city_b):
-    """
-    distance_squared(city_a: tuple[float, float],
-                        city_b: tuple[float, float]) -> float
-
-    A function to calculate distance between two nodes.
-
-    Uses pythagorean theorem in order to calculate hypotenuse square.
-
-    city_a: (x, y)
-
-    city_b: (x, y)
-
-    Returns square of distance between two cities.
-    """
-
-    leg_a = city_a[0] - city_b[0]
-    leg_b = city_a[1] - city_b[1]
-
-    square_distance = leg_a ** 2 + leg_b ** 2
-
-    return sqrt(square_distance)
+    return closest_city, best_distance
