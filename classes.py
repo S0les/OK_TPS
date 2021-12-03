@@ -6,6 +6,9 @@ from abc import ABC, abstractmethod
 from math import dist
 from random import shuffle, uniform, randrange
 
+from matplotlib import pyplot as plt
+from matplotlib.animation import FuncAnimation
+
 
 class Solver(ABC):
 
@@ -105,6 +108,39 @@ class SimulatedAnnealing(Solver):
         self.curr_dist = self.get_total_dist(self.order)
         self.iterations = 0
         self.max_repeats = int(10 * (1 / (1 - self.cooling_rate)))
+        self.history = [self.order]
+
+    def _get_order_from_history(self):
+        if len(self.history) > 100:
+            self.history = self.history[90:]
+        elif len(self.history) > 10:
+            self.history = self.history[9:]
+        return self.history.pop(0)
+
+    def _animation(self, i) -> None:
+        if len(self.history) > 0:
+            order = self._get_order_from_history()
+            plt.cla()
+            plt.title(label=f"Distance is: {self.get_total_dist(order):.2f}",
+                      fontsize=18)
+            order.append(order[0])
+            cities = [self.cities[i] for i in order]
+            cities_x, cities_y = zip(*cities)
+            plt.plot(cities_x, cities_y, marker='o',
+                     markerfacecolor='indianred')
+
+        return
+
+    def animated(self) -> None:
+        if len(self.history) < 2:
+            self.solve()
+        plt.style.use("fivethirtyeight")
+        _ = FuncAnimation(plt.gcf(), self._animation, interval=100)
+        plt.tight_layout()
+        manager = plt.get_current_fig_manager()
+        manager.full_screen_toggle()
+        plt.show()
+        return
 
     def solve(self) -> None:
         """
@@ -147,7 +183,7 @@ class SimulatedAnnealing(Solver):
         if loss <= 0 or uniform(0, 1) < prob:
             self.two_opt(a, b)
             self.curr_dist = self.get_total_dist(self.order)
-
+            self.history.append(self.order)
         return self.order
 
     def get_best_order(self) -> list[int]:
@@ -194,3 +230,60 @@ class SimulatedAnnealing(Solver):
 
         self.order = (self.order[:a + 1] + self.order[b:a:-1]
                       + self.order[b + 1:])
+
+
+class AdvancedGreedy(Solver):
+    """
+    Solver using the greedy algorithm for every possible starting point
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.curr_dist = float('inf')
+
+    def solve(self) -> None:
+        """
+        For every starting city continue search for the closest city until
+        eleminate every.
+        """
+
+        for start_index in range(self.n):
+
+            order = [start_index]
+            not_visited = [x for x in range(self.n)
+                           if x != start_index]
+            length = 0
+            start = start_index
+
+            for _ in range(self.n - 1):
+                start, distance = self.get_closest_city(start, not_visited)
+                length += distance
+                order.append(start)
+                not_visited.remove(start)
+
+            length += self.adj[start_index][order[-1]]
+            order.append(start_index)
+
+            if length < self.curr_dist:
+                self.curr_dist = length
+                self.order = order
+        return
+
+    def get_closest_city(self, start_index: int,
+                         not_visited: list[int]) -> [int, int]:
+        """
+        Get the index of the clossest city for the current one.
+        """
+        distance = float('inf')
+
+        for city in not_visited:
+            if self.adj[start_index][city] < distance:
+                distance = self.adj[start_index][city]
+                closest_city_index = city
+        return closest_city_index, distance
+
+    def get_best_order(self):
+        return self.order
+
+    def get_next_order(self):
+        return list()
