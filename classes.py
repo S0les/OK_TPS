@@ -6,6 +6,9 @@ from abc import ABC, abstractmethod
 from math import dist
 from random import shuffle, uniform, randrange
 
+from matplotlib import pyplot as plt
+from matplotlib.animation import FuncAnimation
+
 
 class Solver(ABC):
 
@@ -75,6 +78,12 @@ class Solver(ABC):
         """
 
     @abstractmethod
+    def animated(self) -> None:
+        """
+        Vizualizates the solution for the problem
+        """
+
+    @abstractmethod
     def get_next_order(self) -> list[int]:
         """
         Returns the list of the next ordering of the path.
@@ -105,6 +114,44 @@ class SimulatedAnnealing(Solver):
         self.curr_dist = self.get_total_dist(self.order)
         self.iterations = 0
         self.max_repeats = int(10 * (1 / (1 - self.cooling_rate)))
+        self.history = [self.order]
+
+    def animated(self) -> None:
+        if len(self.history) < 2:
+            self.solve()
+
+        history = self.history
+
+        def _animation(i) -> None:
+            if len(history) > 0:
+                order = _get_order_from_history()
+                plt.cla()
+                plt.title(label=f"Distance is: \
+                          {self.get_total_dist(order):.2f}",
+                          fontsize=18)
+                order.append(order[0])
+                print(order)
+                cities = [self.cities[i] for i in order]
+                cities_x, cities_y = zip(*cities)
+                plt.plot(cities_x, cities_y, marker='o',
+                         markerfacecolor='indianred')
+            return
+
+        def _get_order_from_history() -> list[int]:
+            nonlocal history
+            if len(history) > 100:
+                history = history[90:]
+            elif len(history) > 10:
+                history = history[9:]
+            return history.pop(0)
+
+        plt.style.use("fivethirtyeight")
+        _ = FuncAnimation(plt.gcf(), _animation, interval=100)
+        plt.tight_layout()
+        manager = plt.get_current_fig_manager()
+        manager.full_screen_toggle()
+        plt.show()
+        return
 
     def solve(self) -> None:
         """
@@ -147,7 +194,7 @@ class SimulatedAnnealing(Solver):
         if loss <= 0 or uniform(0, 1) < prob:
             self.two_opt(a, b)
             self.curr_dist = self.get_total_dist(self.order)
-
+            self.history.append(self.order)
         return self.order
 
     def get_best_order(self) -> list[int]:
@@ -233,6 +280,43 @@ class AdvancedGreedy(Solver):
             if length < self.curr_dist:
                 self.curr_dist = length
                 self.order = order
+        return
+
+    def animated(self) -> None:
+        self.solve()
+
+        counter = 1
+
+        def __animation(i) -> None:
+
+            nonlocal counter
+
+            if counter > self.n + 1:
+                return
+
+            else:
+                order = self.order[:counter]
+
+            counter += 1
+
+            plt.cla()
+            plt.title(label="Greedy Solution with distance: " +
+                      f"{self.get_total_dist(order):.2f}.", fontsize=18)
+            cities = [self.cities[i] for i in order]
+            cities_x, cities_y = zip(*cities)
+            plt.plot(cities_x, cities_y, marker='o',
+                     markerfacecolor="indianred")
+            cities_x, cities_y = zip(*self.cities)
+            plt.scatter(cities_x, cities_y, color="indianred")
+            print(order)
+            return
+
+        plt.style.use("fivethirtyeight")
+        _ = FuncAnimation(plt.gcf(), __animation, interval=1)
+        plt.tight_layout()
+        manager = plt.get_current_fig_manager()
+        manager.full_screen_toggle()
+        plt.show()
         return
 
     def get_closest_city(self, start_index: int,
