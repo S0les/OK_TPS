@@ -130,7 +130,6 @@ class SimulatedAnnealing(Solver):
                           {self.get_total_dist(order):.2f}",
                           fontsize=18)
                 order.append(order[0])
-                print(order)
                 cities = [self.cities[i] for i in order]
                 cities_x, cities_y = zip(*cities)
                 plt.plot(cities_x, cities_y, marker='o',
@@ -163,16 +162,21 @@ class SimulatedAnnealing(Solver):
             return
 
         repeat = 0
-        lowest_dist = float("inf")
+        lowest_dist = self.get_total_dist(self.order)
+        best_order = self.order
 
         while repeat < self.max_repeats:
             self.get_next_order()
             if self.curr_dist < lowest_dist:
                 repeat = 0
                 lowest_dist = self.curr_dist
+                best_order = self.order
+                self.history.append(best_order)
             else:
                 repeat += 1
 
+        self.curr_dist = lowest_dist
+        self.order = best_order
         return
 
     def get_next_order(self) -> list[int]:
@@ -194,7 +198,6 @@ class SimulatedAnnealing(Solver):
         if loss <= 0 or uniform(0, 1) < prob:
             self.two_opt(a, b)
             self.curr_dist = self.get_total_dist(self.order)
-            self.history.append(self.order)
         return self.order
 
     def get_best_order(self) -> list[int]:
@@ -308,7 +311,6 @@ class AdvancedGreedy(Solver):
                      markerfacecolor="indianred")
             cities_x, cities_y = zip(*self.cities)
             plt.scatter(cities_x, cities_y, color="indianred")
-            print(order)
             return
 
         plt.style.use("fivethirtyeight")
