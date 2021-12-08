@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import math
 
 from abc import ABC, abstractmethod
@@ -47,6 +48,7 @@ class Solver(ABC):
             [dist(i, j) if i != j else 0 for i in self.cities]
             for j in self.cities
         ]
+        self.curr_dist = self.get_total_dist(self.order)
         return
 
     def get_total_dist(self, order: list[int]) -> float:
@@ -101,7 +103,7 @@ class Solver(ABC):
 
 class SimulatedAnnealing(Solver):
     """
-    Solver using the simmulated annealing algorithm
+    Solver using the simmulated annealing algorithm with cities swap
     """
 
     def __init__(self, temperature: float = 100,
@@ -130,7 +132,6 @@ class SimulatedAnnealing(Solver):
                           {self.get_total_dist(order):.2f}",
                           fontsize=18)
                 order.append(order[0])
-                print(order)
                 cities = [self.cities[i] for i in order]
                 cities_x, cities_y = zip(*cities)
                 plt.plot(cities_x, cities_y, marker='o',
@@ -163,16 +164,21 @@ class SimulatedAnnealing(Solver):
             return
 
         repeat = 0
-        lowest_dist = float("inf")
+        lowest_dist = self.get_total_dist(self.order)
+        best_order = self.order
 
         while repeat < self.max_repeats:
             self.get_next_order()
             if self.curr_dist < lowest_dist:
                 repeat = 0
                 lowest_dist = self.curr_dist
+                best_order = self.order
+                self.history.append(best_order)
             else:
                 repeat += 1
 
+        self.curr_dist = lowest_dist
+        self.order = best_order
         return
 
     def get_next_order(self) -> list[int]:
@@ -194,7 +200,6 @@ class SimulatedAnnealing(Solver):
         if loss <= 0 or uniform(0, 1) < prob:
             self.two_opt(a, b)
             self.curr_dist = self.get_total_dist(self.order)
-            self.history.append(self.order)
         return self.order
 
     def get_best_order(self) -> list[int]:
@@ -241,6 +246,133 @@ class SimulatedAnnealing(Solver):
 
         self.order = (self.order[:a + 1] + self.order[b:a:-1]
                       + self.order[b + 1:])
+
+
+###############################################################################
+
+
+class SimulatedAnnealingV2(SimulatedAnnealing):
+    def __init__(self, temperature=0.5, cooling_rate=0.9):
+        super().__init__(temperature=temperature, cooling_rate=cooling_rate)
+        self.nArray = [None] * 6
+
+    def solve(self):
+        if not self.cities:
+            return
+
+        # Limit of tries to make a change per temperature step
+        self.nover = 100 * self.n
+
+        # Limit of total changes per temperature step
+        self.nlimit = 10 * self.n
+
+        shuffle(self.order)
+        self.curr_dist = self.get_total_dist(self.order)
+        self.history = [self.order]
+
+        for j in range(100):
+
+            # Changes done on this step
+            nsucc = 0
+
+            for k in range(self.nover):
+                not_in = 0
+                while (not_in < 2):
+                    self.nArray[0] = int(self.n*uniform(0, 1))
+                    self.nArray[1] = int((self.n - 1)*uniform(0, 1))
+                    if self.nArray[1] >= self.nArray[0]:
+                        self.nArray[1] += 1
+                    not_in = ((self.nArray[0] - self.nArray[1]
+                               + self.n - 1) % self.n)
+
+                if uniform(0, 1) < 0.5:
+                    self.nArray[2] = (self.nArray[1]
+                                      + int(abs(not_in - 1)*uniform(0, 1)) + 1)
+                    self.nArray[2] %= self.n
+                    cost = self.transportcost()
+                    answer = self.metrop(cost)
+                    if answer:
+                        nsucc += 1
+                        self.curr_dist += cost
+                        self.transport()
+                        self.history.append(self.order)
+
+                else:
+                    cost = self.reversecost()
+                    answer = self.metrop(cost)
+                    if answer:
+                        nsucc += 1
+                        self.curr_dist += cost
+                        self.reverse()
+                        self.history.append(self.order)
+
+                if nsucc >= self.nlimit:
+                    break
+
+            self.temperature *= self.cooling_rate
+            if nsucc == 0:
+                return
+
+    def reversecost(self):
+        self.nArray[2] = (self.nArray[0] + self.n - 1) % self.n
+        self.nArray[3] = (self.nArray[1] + 1) % self.n
+        indexes = [None] * 4
+        for i in range(4):
+            indexes[i] = self.order[self.nArray[i]]
+        cost = -self.adj[indexes[0]][indexes[2]]
+        cost -= self.adj[indexes[1]][indexes[3]]
+        cost += self.adj[indexes[0]][indexes[3]]
+        cost += self.adj[indexes[1]][indexes[2]]
+        return cost
+
+    def reverse(self):
+        to_swap = (1 + ((self.nArray[1] - self.nArray[0] + self.n)
+                        % self.n))//2
+        for i in range(to_swap):
+            k = (self.nArray[0] + i) % self.n
+            j = (self.nArray[1] - i + self.n) % self.n
+            self.order[k], self.order[j] = self.order[j], self.order[k]
+        return
+
+    def transportcost(self):
+        self.nArray[3] = (self.nArray[2] + 1) % self.n
+        self.nArray[4] = (self.nArray[0] + self.n - 1) % self.n
+        self.nArray[5] = (self.nArray[1] + 1) % self.n
+        indexes = [None] * 6
+        for i in range(6):
+            indexes[i] = self.order[self.nArray[i]]
+
+        cost = -self.adj[indexes[1]][indexes[5]]
+        cost -= self.adj[indexes[0]][indexes[4]]
+        cost -= self.adj[indexes[2]][indexes[3]]
+        cost += self.adj[indexes[0]][indexes[2]]
+        cost += self.adj[indexes[1]][indexes[3]]
+        cost += self.adj[indexes[4]][indexes[5]]
+        return cost
+
+    def transport(self):
+        neworder = copy.copy(self.order)
+        m1 = (self.nArray[1] - self.nArray[0] + self.n) % self.n
+        m2 = (self.nArray[4] - self.nArray[3] + self.n) % self.n
+        m3 = (self.nArray[2] - self.nArray[5] + self.n) % self.n
+        index = 0
+        for i in range(m1 + 1):
+            ii = (i + self.nArray[0]) % self.n
+            neworder[index] = self.order[ii]
+            index += 1
+        for i in range(m2 + 1):
+            ii = (i + self.nArray[3]) % self.n
+            neworder[index] = self.order[ii]
+            index += 1
+        for i in range(m3 + 1):
+            ii = (i + self.nArray[5]) % self.n
+            neworder[index] = self.order[ii]
+            index += 1
+        self.order = copy.copy(neworder)
+        return
+
+    def metrop(self, cost):
+        return cost < 0 or uniform(0, 1) < math.exp(-cost/self.temperature)
 
 
 ###############################################################################
@@ -308,7 +440,6 @@ class AdvancedGreedy(Solver):
                      markerfacecolor="indianred")
             cities_x, cities_y = zip(*self.cities)
             plt.scatter(cities_x, cities_y, color="indianred")
-            print(order)
             return
 
         plt.style.use("fivethirtyeight")
