@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import math
 
 from abc import ABC, abstractmethod
@@ -47,6 +48,7 @@ class Solver(ABC):
             [dist(i, j) if i != j else 0 for i in self.cities]
             for j in self.cities
         ]
+        self.curr_dist = self.get_total_dist(self.order)
         return
 
     def get_total_dist(self, order: list[int]) -> float:
@@ -244,6 +246,168 @@ class SimulatedAnnealing(Solver):
 
         self.order = (self.order[:a + 1] + self.order[b:a:-1]
                       + self.order[b + 1:])
+
+
+###############################################################################
+
+
+class SimulatedAnnealingV2(SimulatedAnnealing):
+    def __init__(self, temperature=0.5, cooling_rate=0.9):
+        super().__init__(temperature=temperature, cooling_rate=cooling_rate)
+        self.nArray = [None] * 6
+
+    def solve(self):
+        if not self.cities:
+            return
+
+        self.nover = 100 * self.n
+        self.nlimit = 10 * self.n
+        shuffle(self.order)
+        self.curr_dist = self.get_total_dist(self.order)
+        self.history = [self.order]
+
+        # Try up to 100 temperature steps
+        for j in range(100):
+            nsucc = 0
+            for k in range(self.nover):
+                neighboring_cities = 0
+
+                while (neighboring_cities < 2):
+
+                    # Beginning of the segment in range (0, n)
+                    self.nArray[0] = int(self.n * uniform(0, 1))
+
+                    # End of the segment in range (0, n-1)
+                    self.nArray[1] = int((self.n - 1) * uniform(0, 1))
+
+                    if self.nArray[1] >= self.nArray[0]:
+                        self.nArray[1] += 1
+
+                    # Cities are not on the segment
+                    neighboring_cities = ((self.nArray[0] - self.nArray[1]
+                                           + self.n - 1) % self.n)
+
+                if uniform(0, 1) < 0.5:
+
+                    # Do the transport thing
+
+                    # Transport to location not on the segment
+                    self.nArray[2] = (self.nArray[1]
+                                      + int(neighboring_cities * uniform(0, 1))
+                                      + 1) % self.n
+                    cost = self.trncost()
+                    answer = self.metrop(cost)
+                    if answer:
+                        nsucc += 1
+                        self.curr_dist += cost
+                        self.trnspt()
+                        self.history.append(self.order)
+
+                else:
+                    # Do a path reversal
+                    cost = self.reversecost()
+                    answer = self.metrop(cost)
+                    if answer:
+                        nsucc += 1
+                        self.curr_dist += cost
+                        self.reverse()
+                        self.history.append(self.order)
+
+                if nsucc >= self.nlimit:
+                    break
+
+            self.temperature *= self.cooling_rate
+            if nsucc == 0:
+                return
+
+    def reversecost(self):
+
+        # City before the segment
+        self.nArray[2] = (self.nArray[0] + self.n - 1) % self.n
+
+        # City after the segment
+        self.nArray[3] = (self.nArray[1] + 1) % self.n
+
+        indexes = [self.order[self.nArray[i]] for i in range(4)]
+
+        # Distance after reversing the segment
+        cost = -self.adj[indexes[0]][indexes[2]]
+        cost -= self.adj[indexes[1]][indexes[3]]
+
+        # Distance before reversing the segment
+        cost += self.adj[indexes[0]][indexes[3]]
+        cost += self.adj[indexes[1]][indexes[2]]
+        return cost
+
+    def reverse(self):
+        # Reverses cities in a given segment
+        cities_in_segment = (1 + ((self.nArray[1] - self.nArray[0] + self.n)
+                                  % self.n)) // 2
+        for i in range(cities_in_segment):
+            k = (self.nArray[0] + i) % self.n
+            j = (self.nArray[1] - i + self.n) % self.n
+            self.order[k], self.order[j] = self.order[j], self.order[k]
+        return
+
+    def trncost(self):
+        # City next to transfer location
+        self.nArray[3] = (self.nArray[2] + 1) % self.n
+
+        # City before the segment
+        self.nArray[4] = (self.nArray[0] + self.n - 1) % self.n
+
+        # City after the segment
+        self.nArray[5] = (self.nArray[1] + 1) % self.n
+
+        indexes = [self.order[self.nArray[i]] for i in range(6)]
+
+        cost = -self.adj[indexes[1]][indexes[5]]
+        cost -= self.adj[indexes[0]][indexes[4]]
+        cost -= self.adj[indexes[2]][indexes[3]]
+        cost += self.adj[indexes[0]][indexes[2]]
+        cost += self.adj[indexes[1]][indexes[3]]
+        cost += self.adj[indexes[4]][indexes[5]]
+        return cost
+
+    def trnspt(self):
+        # if (self.nArray[1] > self.nArray[0]):
+        #     segment = (self.order[:self.nArray[0]]
+        #                + self.order[self.nArray[1] + 1:])
+
+        #     destination = segment.index(self.order[self.nArray[2]]) + 1
+
+        #     self.order = (segment[:destination]
+        #                   + self.order[self.nArray[0]:self.nArray[1] + 1]
+        #                   + segment[destination:])
+        # elif (self.nArray[1] < self.nArray[0]):
+        #     segment = self.order[self.nArray[1] + 1:self.nArray[0]]
+        #     destination = segment.index(self.order[self.nArray[2]]) + 1
+
+        #     self.order = (segment[:destination] + self.order[self.nArray[0]:]
+        #                   + self.order[:self.nArray[1] + 1]
+        #                   + segment[destination:])
+        neworder = copy.copy(self.order)
+        m1 = (self.nArray[1] - self.nArray[0] + self.n) % self.n
+        m2 = (self.nArray[4] - self.nArray[3] + self.n) % self.n
+        m3 = (self.nArray[2] - self.nArray[5] + self.n) % self.n
+        nn = 0
+        for i in range(m1 + 1):
+            ii = (i + self.nArray[0]) % self.n
+            neworder[nn] = self.order[ii]
+            nn += 1
+        for i in range(m2 + 1):
+            ii = (i + self.nArray[3]) % self.n
+            neworder[nn] = self.order[ii]
+            nn += 1
+        for i in range(m3 + 1):
+            ii = (i + self.nArray[5]) % self.n
+            neworder[nn] = self.order[ii]
+            nn += 1
+        self.order = copy.copy(neworder)
+        return
+
+    def metrop(self, cost):
+        return cost < 0 or uniform(0, 1) < math.exp(-cost/self.temperature)
 
 
 ###############################################################################
