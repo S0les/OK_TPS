@@ -79,7 +79,7 @@ class Solver(ABC):
         """
 
         plt.style.use('fivethirtyeight')
-        plt.gcf().set_size_inches(18.5, 10.5)
+        plt.gcf().set_size_inches(20.5, 10.5)
         plt.tight_layout()
         return
 
@@ -100,10 +100,17 @@ class Solver(ABC):
         """
 
     @abstractmethod
-    def animated(self) -> None:
+    def animated(self, fullscreen: bool = True, repeat: bool = False,
+                 save: bool = False) -> None:
         """
         Builds the matplotlib.pyplot figure with vizualization
         solution was achieved for the given algorithm.
+
+        @param fullscreen: Toggles wether animation will be shown
+        in a fullscreen or not
+        @param repeat: Repeats animation if True
+        @param save: Saves the vizualization as a .gif file instead of showing
+        an animation
         """
 
     @abstractmethod
@@ -139,46 +146,6 @@ class SimulatedAnnealing(Solver):
         self.iterations = 0
         self.max_repeats = int(10 * (1 / (1 - self.cooling_rate)))
         self.history = [self.order]
-
-    def animated(self) -> None:
-        if len(self.history) < 2:
-            self.solve()
-
-        history = copy.deepcopy(self.history)
-
-        def _animation(i) -> None:
-            if len(history) > 0:
-                order = _get_order_from_history()
-                plt.cla()
-                plt.title(label=f"Distance is: \
-                          {self.get_total_dist(order):.2f}",
-                          fontsize=18)
-                order.append(order[0])
-                cities = [self.cities[i] for i in order]
-                cities_x, cities_y = zip(*cities)
-                plt.plot(cities_x, cities_y, marker='o',
-                         markerfacecolor='indianred')
-            return
-
-        def _get_order_from_history() -> list[int]:
-            nonlocal history
-            if len(history) > 100:
-                history = history[90:]
-            elif len(history) > 10:
-                history = history[9:]
-            return history.pop(0)
-
-        plt.style.use("fivethirtyeight")
-        ani = FuncAnimation(plt.gcf(), _animation, interval=100,
-                            cache_frame_data=False)
-        plt.tight_layout()
-        fig = plt.gcf()
-        fig.set_size_inches(18.5, 10.5)
-        # manager = plt.get_current_fig_manager()
-        # manager.full_screen_toggle()
-        ani.save('test.gif')
-        plt.show()
-        return
 
     def solve(self) -> None:
         """
@@ -272,6 +239,49 @@ class SimulatedAnnealing(Solver):
 
         self.order = (self.order[:a + 1] + self.order[b:a:-1]
                       + self.order[b + 1:])
+
+    def animated(self, fullscreen: bool = True, repeat: bool = False) -> None:
+
+        frames = self.get_frames()
+
+        if not frames:
+            return
+
+        def _animation(frame) -> None:
+            plt.cla()
+            plt.title(label=f"Distance is: \
+                      {self.get_total_dist(frame):.2f}",
+                      fontsize=18)
+            cities = [self.cities[i] for i in frame]
+            cities_x, cities_y = zip(*cities)
+            plt.plot(cities_x, cities_y, marker='o',
+                     markerfacecolor='indianred')
+            return
+
+        _ = FuncAnimation(plt.gcf(), _animation, frames=frames,
+                          interval=100, cache_frame_data=False,
+                          init_func=self.init_func, repeat=repeat)
+        if fullscreen:
+            manager = plt.get_current_fig_manager()
+            manager.full_screen_toggle()
+
+        plt.show()
+        return
+
+    def get_frames(self) -> list[list[int]]:
+        frames = []
+        if not self.history:
+            return frames
+
+        history = copy.deepcopy(self.history)
+        while(history):
+            if len(history) > 100:
+                history = history[90:]
+            elif len(history) > 10:
+                history = history[9:]
+            frames.append(history.pop(0))
+            frames[-1].append(frames[-1][0])
+        return frames
 
 
 ###############################################################################
@@ -440,27 +450,19 @@ class AdvancedGreedy(Solver):
                 self.order = order
         return
 
-    def animated(self) -> None:
-        self.solve()
+    def get_frames(self) -> list[list[int]]:
+        frames = [[self.order[x] for x in range(i)] for i in range(1, self.n)]
+        return frames
 
-        counter = 1
+    def animated(self, fullscreen: bool = True, repeat: bool = False) -> None:
+        frames = self.get_frames()
 
-        def __animation(i) -> None:
-
-            nonlocal counter
-
-            if counter > self.n + 1:
-                return
-
-            else:
-                order = self.order[:counter]
-
-            counter += 1
+        def _animation(frame) -> None:
 
             plt.cla()
             plt.title(label="Greedy Solution with distance: " +
-                      f"{self.get_total_dist(order):.2f}.", fontsize=18)
-            cities = [self.cities[i] for i in order]
+                      f"{self.get_total_dist(frame):.2f}.", fontsize=18)
+            cities = [self.cities[i] for i in frame]
             cities_x, cities_y = zip(*cities)
             plt.plot(cities_x, cities_y, marker='o',
                      markerfacecolor="indianred")
@@ -468,12 +470,13 @@ class AdvancedGreedy(Solver):
             plt.scatter(cities_x, cities_y, color="indianred")
             return
 
-        plt.style.use("fivethirtyeight")
-        _ = FuncAnimation(plt.gcf(), __animation, interval=1,
-                          cache_frame_data=False)
-        plt.tight_layout()
-        manager = plt.get_current_fig_manager()
-        manager.full_screen_toggle()
+        _ = FuncAnimation(plt.gcf(), _animation, interval=100,
+                          init_func=self.init_func, cache_frame_data=False,
+                          frames=frames, repeat=repeat)
+        if fullscreen:
+            manager = plt.get_current_fig_manager()
+            manager.full_screen_toggle()
+
         plt.show()
         return
 
