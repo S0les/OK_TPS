@@ -71,6 +71,26 @@ class Solver(ABC):
 
         return total
 
+    @staticmethod
+    def init_func() -> None:
+        """
+        Initial function to be called before matplotlib.pyplot
+        was build. Makes initial figure setup.
+        """
+
+        plt.style.use('fivethirtyeight')
+        plt.gcf().set_size_inches(18.5, 10.5)
+        plt.tight_layout()
+        return
+
+    @abstractmethod
+    def get_frames(self) -> list[list[int]]:
+        """
+        Returns the frames, needed for the solution animation,
+        as the two dimensional list of orders solution was achieved.
+        @return two dimensional list of orders, an empty if there's none.
+        """
+
     @abstractmethod
     def solve(self) -> None:
         """
@@ -82,7 +102,8 @@ class Solver(ABC):
     @abstractmethod
     def animated(self) -> None:
         """
-        Vizualizates the solution for the problem
+        Builds the matplotlib.pyplot figure with vizualization
+        solution was achieved for the given algorithm.
         """
 
     @abstractmethod
@@ -97,6 +118,7 @@ class Solver(ABC):
         """
         @return the list of the current best ordering.
         """
+
 
 ###############################################################################
 
@@ -122,7 +144,7 @@ class SimulatedAnnealing(Solver):
         if len(self.history) < 2:
             self.solve()
 
-        history = self.history
+        history = copy.deepcopy(self.history)
 
         def _animation(i) -> None:
             if len(history) > 0:
@@ -150,9 +172,9 @@ class SimulatedAnnealing(Solver):
         ani = FuncAnimation(plt.gcf(), _animation, interval=100,
                             cache_frame_data=False)
         plt.tight_layout()
-        # manager = plt.get_current_fig_manager()
         fig = plt.gcf()
         fig.set_size_inches(18.5, 10.5)
+        # manager = plt.get_current_fig_manager()
         # manager.full_screen_toggle()
         ani.save('test.gif')
         plt.show()
