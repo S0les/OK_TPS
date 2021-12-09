@@ -147,10 +147,14 @@ class SimulatedAnnealing(Solver):
             return history.pop(0)
 
         plt.style.use("fivethirtyeight")
-        _ = FuncAnimation(plt.gcf(), _animation, interval=100)
+        ani = FuncAnimation(plt.gcf(), _animation, interval=100,
+                            cache_frame_data=False)
         plt.tight_layout()
-        manager = plt.get_current_fig_manager()
-        manager.full_screen_toggle()
+        # manager = plt.get_current_fig_manager()
+        fig = plt.gcf()
+        fig.set_size_inches(18.5, 10.5)
+        # manager.full_screen_toggle()
+        ani.save('test.gif')
         plt.show()
         return
 
@@ -443,7 +447,8 @@ class AdvancedGreedy(Solver):
             return
 
         plt.style.use("fivethirtyeight")
-        _ = FuncAnimation(plt.gcf(), __animation, interval=1)
+        _ = FuncAnimation(plt.gcf(), __animation, interval=1,
+                          cache_frame_data=False)
         plt.tight_layout()
         manager = plt.get_current_fig_manager()
         manager.full_screen_toggle()
