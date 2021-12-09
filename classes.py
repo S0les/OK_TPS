@@ -240,7 +240,8 @@ class SimulatedAnnealing(Solver):
         self.order = (self.order[:a + 1] + self.order[b:a:-1]
                       + self.order[b + 1:])
 
-    def animated(self, fullscreen: bool = True, repeat: bool = False) -> None:
+    def animated(self, fullscreen: bool = True, repeat: bool = False,
+                 save: bool = False) -> None:
 
         frames = self.get_frames()
 
@@ -258,14 +259,22 @@ class SimulatedAnnealing(Solver):
                      markerfacecolor='indianred')
             return
 
-        _ = FuncAnimation(plt.gcf(), _animation, frames=frames,
-                          interval=100, cache_frame_data=False,
-                          init_func=self.init_func, repeat=repeat)
+        animation = FuncAnimation(plt.gcf(), _animation, frames=frames,
+                                  interval=100, cache_frame_data=False,
+                                  init_func=self.init_func, repeat=repeat)
         if fullscreen:
             manager = plt.get_current_fig_manager()
             manager.full_screen_toggle()
 
-        plt.show()
+        if save:
+            self.init_func()
+            animation.save(f"SimulatedAnnealing_{self.n}_{self.curr_dist}.gif")
+            print(f"Saved as SimulatedAnnealing_{self.n}"
+                  + f"_{self.curr_dist}.gif!")
+            plt.savefig(f"graphs/SimulatedAnnealing_{self.n}"
+                        + f"{self.curr_dist}.svg")
+        else:
+            plt.show()
         return
 
     def get_frames(self) -> list[list[int]]:
@@ -452,9 +461,12 @@ class AdvancedGreedy(Solver):
 
     def get_frames(self) -> list[list[int]]:
         frames = [[self.order[x] for x in range(i)] for i in range(1, self.n)]
+        frames.append(self.order)
+        frames.append(self.order + [self.order[0]])
         return frames
 
-    def animated(self, fullscreen: bool = True, repeat: bool = False) -> None:
+    def animated(self, fullscreen: bool = True, repeat: bool = False,
+                 save: bool = False) -> None:
         frames = self.get_frames()
 
         def _animation(frame) -> None:
@@ -470,14 +482,21 @@ class AdvancedGreedy(Solver):
             plt.scatter(cities_x, cities_y, color="indianred")
             return
 
-        _ = FuncAnimation(plt.gcf(), _animation, interval=100,
-                          init_func=self.init_func, cache_frame_data=False,
-                          frames=frames, repeat=repeat)
+        animation = FuncAnimation(plt.gcf(), _animation, interval=100,
+                                  init_func=self.init_func,
+                                  cache_frame_data=False,
+                                  frames=frames, repeat=repeat)
         if fullscreen:
             manager = plt.get_current_fig_manager()
             manager.full_screen_toggle()
-
-        plt.show()
+        if save:
+            self.init_func()
+            animation.save(f"graphs/AdvancedGreedy_{self.n}"
+                           + f"_{self.curr_dist}.gif")
+            print(f"Saved as AdvancedGreedy_{self.n}_{self.curr_dist}.gif!")
+            plt.savefig(f"graphs/AdvancedGreedy_{self.n}_{self.curr_dist}.svg")
+        else:
+            plt.show()
         return
 
     def get_closest_city(self, start_index: int,
