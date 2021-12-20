@@ -71,6 +71,26 @@ class Solver(ABC):
 
         return total
 
+    @staticmethod
+    def init_func() -> None:
+        """
+        Initial function to be called before matplotlib.pyplot
+        was build. Makes initial figure setup.
+        """
+
+        plt.style.use('fivethirtyeight')
+        plt.gcf().set_size_inches(20.5, 10.5)
+        plt.tight_layout()
+        return
+
+    @abstractmethod
+    def get_frames(self) -> list[list[int]]:
+        """
+        Returns the frames, needed for the solution animation,
+        as the two dimensional list of orders solution was achieved.
+        @return two dimensional list of orders, an empty if there's none.
+        """
+
     @abstractmethod
     def solve(self) -> None:
         """
@@ -80,9 +100,17 @@ class Solver(ABC):
         """
 
     @abstractmethod
-    def animated(self) -> None:
+    def animated(self, fullscreen: bool = True, repeat: bool = False,
+                 save: bool = False) -> None:
         """
-        Vizualizates the solution for the problem
+        Builds the matplotlib.pyplot figure with vizualization
+        solution was achieved for the given algorithm.
+
+        @param fullscreen: Toggles whether animation will be shown
+        in a fullscreen or not
+        @param repeat: Repeats animation if True
+        @param save: Saves the vizualization as a .gif file instead of showing
+        an animation
         """
 
     @abstractmethod
@@ -97,6 +125,7 @@ class Solver(ABC):
         """
         @return the list of the current best ordering.
         """
+
 
 ###############################################################################
 
@@ -117,42 +146,6 @@ class SimulatedAnnealing(Solver):
         self.iterations = 0
         self.max_repeats = int(10 * (1 / (1 - self.cooling_rate)))
         self.history = [self.order]
-
-    def animated(self) -> None:
-        if len(self.history) < 2:
-            self.solve()
-
-        history = self.history
-
-        def _animation(i) -> None:
-            if len(history) > 0:
-                order = _get_order_from_history()
-                plt.cla()
-                plt.title(label=f"Distance is: \
-                          {self.get_total_dist(order):.2f}",
-                          fontsize=18)
-                order.append(order[0])
-                cities = [self.cities[i] for i in order]
-                cities_x, cities_y = zip(*cities)
-                plt.plot(cities_x, cities_y, marker='o',
-                         markerfacecolor='indianred')
-            return
-
-        def _get_order_from_history() -> list[int]:
-            nonlocal history
-            if len(history) > 100:
-                history = history[90:]
-            elif len(history) > 10:
-                history = history[9:]
-            return history.pop(0)
-
-        plt.style.use("fivethirtyeight")
-        _ = FuncAnimation(plt.gcf(), _animation, interval=100)
-        plt.tight_layout()
-        manager = plt.get_current_fig_manager()
-        manager.full_screen_toggle()
-        plt.show()
-        return
 
     def solve(self) -> None:
         """
@@ -246,6 +239,58 @@ class SimulatedAnnealing(Solver):
 
         self.order = (self.order[:a + 1] + self.order[b:a:-1]
                       + self.order[b + 1:])
+
+    def animated(self, fullscreen: bool = True, repeat: bool = False,
+                 save: bool = False) -> None:
+
+        frames = self.get_frames()
+
+        if not frames:
+            return
+
+        def _animation(frame) -> None:
+            plt.cla()
+            plt.title(label=f"Distance is: \
+                      {self.get_total_dist(frame):.2f}",
+                      fontsize=18)
+            cities = [self.cities[i] for i in frame]
+            cities_x, cities_y = zip(*cities)
+            plt.plot(cities_x, cities_y, marker='o',
+                     markerfacecolor='indianred')
+            return
+
+        animation = FuncAnimation(plt.gcf(), _animation, frames=frames,
+                                  interval=100, cache_frame_data=False,
+                                  init_func=self.init_func, repeat=repeat)
+        if fullscreen:
+            manager = plt.get_current_fig_manager()
+            manager.full_screen_toggle()
+
+        if save:
+            self.init_func()
+            animation.save(f"SimulatedAnnealing_{self.n}_{self.curr_dist}.gif")
+            print(f"Saved as SimulatedAnnealing_{self.n}"
+                  + f"_{self.curr_dist}.gif!")
+            plt.savefig(f"graphs/SimulatedAnnealing_{self.n}"
+                        +f"{self.curr_dist}.svg")
+        else:
+            plt.show()
+        return
+
+    def get_frames(self) -> list[list[int]]:
+        frames = []
+        if not self.history:
+            return frames
+
+        history = copy.deepcopy(self.history)
+        while(history):
+            if len(history) > 100:
+                history = history[90:]
+            elif len(history) > 10:
+                history = history[9:]
+            frames.append(history.pop(0))
+            frames[-1].append(frames[-1][0])
+        return frames
 
 
 ###############################################################################
@@ -414,27 +459,22 @@ class AdvancedGreedy(Solver):
                 self.order = order
         return
 
-    def animated(self) -> None:
-        self.solve()
+    def get_frames(self) -> list[list[int]]:
+        frames = [[self.order[x] for x in range(i)] for i in range(1, self.n)]
+        frames.append(self.order)
+        frames.append(self.order + [self.order[0]])
+        return frames
 
-        counter = 1
+    def animated(self, fullscreen: bool = True, repeat: bool = False,
+                 save: bool = False) -> None:
+        frames = self.get_frames()
 
-        def __animation(i) -> None:
-
-            nonlocal counter
-
-            if counter > self.n + 1:
-                return
-
-            else:
-                order = self.order[:counter]
-
-            counter += 1
+        def _animation(frame) -> None:
 
             plt.cla()
             plt.title(label="Greedy Solution with distance: " +
-                      f"{self.get_total_dist(order):.2f}.", fontsize=18)
-            cities = [self.cities[i] for i in order]
+                      f"{self.get_total_dist(frame):.2f}.", fontsize=18)
+            cities = [self.cities[i] for i in frame]
             cities_x, cities_y = zip(*cities)
             plt.plot(cities_x, cities_y, marker='o',
                      markerfacecolor="indianred")
@@ -442,12 +482,21 @@ class AdvancedGreedy(Solver):
             plt.scatter(cities_x, cities_y, color="indianred")
             return
 
-        plt.style.use("fivethirtyeight")
-        _ = FuncAnimation(plt.gcf(), __animation, interval=1)
-        plt.tight_layout()
-        manager = plt.get_current_fig_manager()
-        manager.full_screen_toggle()
-        plt.show()
+        animation = FuncAnimation(plt.gcf(), _animation, interval=100,
+                                  init_func=self.init_func,
+                                  cache_frame_data=False,
+                                  frames=frames, repeat=repeat)
+        if fullscreen:
+            manager = plt.get_current_fig_manager()
+            manager.full_screen_toggle()
+        if save:
+            self.init_func()
+            animation.save(f"graphs/AdvancedGreedy_{self.n}"
+                           + f"_{self.curr_dist}.gif")
+            print(f"Saved as AdvancedGreedy_{self.n}_{self.curr_dist}.gif!")
+            plt.savefig(f"graphs/AdvancedGreedy_{self.n}_{self.curr_dist}.svg")
+        else:
+            plt.show()
         return
 
     def get_closest_city(self, start_index: int,
