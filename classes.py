@@ -106,7 +106,7 @@ class Solver(ABC):
         Builds the matplotlib.pyplot figure with vizualization
         solution was achieved for the given algorithm.
 
-        @param fullscreen: Toggles wether animation will be shown
+        @param fullscreen: Toggles whether animation will be shown
         in a fullscreen or not
         @param repeat: Repeats animation if True
         @param save: Saves the vizualization as a .gif file instead of showing
@@ -272,7 +272,7 @@ class SimulatedAnnealing(Solver):
             print(f"Saved as SimulatedAnnealing_{self.n}"
                   + f"_{self.curr_dist}.gif!")
             plt.savefig(f"graphs/SimulatedAnnealing_{self.n}"
-                        + f"{self.curr_dist}.svg")
+                        +f"{self.curr_dist}.svg")
         else:
             plt.show()
         return
