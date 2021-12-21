@@ -143,7 +143,6 @@ class SimulatedAnnealing(Solver):
         self.cooling_rate = cooling_rate
         self.initial_temperature = self.temperature
         self.curr_dist = self.get_total_dist(self.order)
-        self.iterations = 0
         self.max_repeats = int(10 * (1 / (1 - self.cooling_rate)))
         self.history = [self.order]
 
@@ -175,13 +174,8 @@ class SimulatedAnnealing(Solver):
         return
 
     def get_next_order(self) -> list[int]:
-        # Lower the temperature
-        self.iterations += 1
-
-        # TODO: tweak the temperature based off number of cities
         self.temperature = self.temperature * self.cooling_rate
 
-        # Find new order
         a, b = self.get_two_cities()
         loss = self.get_swap_cost(a, b)
         if (loss <= 0 or self.temperature <= 0):
@@ -189,7 +183,6 @@ class SimulatedAnnealing(Solver):
         else:
             prob = math.exp(-loss / self.temperature)
 
-        # If new distance shorter, or within probability then use it
         if loss <= 0 or uniform(0, 1) < prob:
             self.two_opt(a, b)
             self.curr_dist = self.get_total_dist(self.order)
@@ -218,11 +211,9 @@ class SimulatedAnnealing(Solver):
 
         n, order = self.n, self.order
 
-        # Find which cities a and b are, and their next city
         a1, a2 = order[a], order[(a + 1) % n]
         b1, b2 = order[b], order[(b + 1) % n]
 
-        # Find the current and new distance
         curr_dist = self.adj[a1][a2] + self.adj[b1][b2]
         new_dist = self.adj[a1][b1] + self.adj[a2][b2]
 
@@ -272,7 +263,7 @@ class SimulatedAnnealing(Solver):
             print(f"Saved as SimulatedAnnealing_{self.n}"
                   + f"_{self.curr_dist}.gif!")
             plt.savefig(f"graphs/SimulatedAnnealing_{self.n}"
-                        +f"{self.curr_dist}.svg")
+                        + f"{self.curr_dist}.svg")
         else:
             plt.show()
         return
@@ -316,20 +307,9 @@ class SimulatedAnnealingV2(SimulatedAnnealing):
         self.history = [self.order]
 
         for j in range(100):
-
-            # Changes done on this step
             nsucc = 0
-
             for k in range(self.nover):
-                not_in = 0
-                while (not_in < 2):
-                    self.nArray[0] = int(self.n*uniform(0, 1))
-                    self.nArray[1] = int((self.n - 1)*uniform(0, 1))
-                    if self.nArray[1] >= self.nArray[0]:
-                        self.nArray[1] += 1
-                    not_in = ((self.nArray[0] - self.nArray[1]
-                               + self.n - 1) % self.n)
-
+                not_in = self.get_slice()
                 if uniform(0, 1) < 0.5:
                     self.nArray[2] = (self.nArray[1]
                                       + int(abs(not_in - 1)*uniform(0, 1)) + 1)
@@ -357,6 +337,22 @@ class SimulatedAnnealingV2(SimulatedAnnealing):
             self.temperature *= self.cooling_rate
             if nsucc == 0:
                 return
+
+    def get_slice(self) -> int:
+        """
+        Gets random segment of order with amount of cities not in
+        equal or more than two.
+
+        @return amount of cities not in segment.
+        """
+        not_in = 0
+        while (not_in < 2):
+            self.nArray[0] = int(self.n * uniform(0, 1))
+            self.nArray[1] = int((self.n - 1) * uniform(0, 1))
+            if self.nArray[1] >= self.nArray[0]:
+                self.nArray[1] += 1
+            not_in = ((self.nArray[0] - self.nArray[1] + self.n - 1) % self.n)
+        return not_in
 
     def reversecost(self):
         self.nArray[2] = (self.nArray[0] + self.n - 1) % self.n
@@ -438,26 +434,22 @@ class AdvancedGreedy(Solver):
         eleminate every.
         """
 
-        for start_index in range(self.n):
-            order = [start_index]
-            not_visited = [x for x in range(self.n)
-                           if x != start_index]
-            length = 0
-            start = start_index
-
-            for _ in range(self.n - 1):
-                start, distance = self.get_closest_city(start, not_visited)
-                length += distance
-                order.append(start)
-                not_visited.remove(start)
-
-            length += self.adj[start_index][order[-1]]
-            order.append(start_index)
-
+        for self.start in range(self.n):
+            order = self.get_next_order()
+            length = self.get_total_dist(order)
             if length < self.curr_dist:
                 self.curr_dist = length
-                self.order = order
+                self.order = order + [order[0]]
         return
+
+    def get_next_order(self) -> list[int]:
+        order = [self.start]
+        not_visited = [x for x in range(self.n) if x != self.start]
+        for _ in range(self.n - 1):
+            self.start = self.get_closest_city(self.start, not_visited)
+            order.append(self.start)
+            not_visited.remove(self.start)
+        return order
 
     def get_frames(self) -> list[list[int]]:
         frames = [[self.order[x] for x in range(i)] for i in range(1, self.n)]
@@ -500,7 +492,7 @@ class AdvancedGreedy(Solver):
         return
 
     def get_closest_city(self, start_index: int,
-                         not_visited: list[int]) -> [int, int]:
+                         not_visited: list[int]) -> int:
         """
         Get the index of the clossest city for the current one.
         """
@@ -510,10 +502,7 @@ class AdvancedGreedy(Solver):
             if self.adj[start_index][city] < distance:
                 distance = self.adj[start_index][city]
                 closest_city_index = city
-        return closest_city_index, distance
+        return closest_city_index
 
     def get_best_order(self):
         return self.order
-
-    def get_next_order(self):
-        return list()
