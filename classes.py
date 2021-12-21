@@ -262,7 +262,7 @@ class SimulatedAnnealing(Solver):
             animation.save(f"SimulatedAnnealing_{self.n}_{self.curr_dist}.gif")
             print(f"Saved as SimulatedAnnealing_{self.n}"
                   + f"_{self.curr_dist}.gif!")
-            plt.savefig(f"graphs/SimulatedAnnealing_{self.n}"
+            plt.savefig(f"SimulatedAnnealing_{self.n}"
                         + f"{self.curr_dist}.svg")
         else:
             plt.show()
@@ -511,10 +511,10 @@ class AdvancedGreedy(Solver):
             manager.full_screen_toggle()
         if save:
             self.init_func()
-            animation.save(f"graphs/AdvancedGreedy_{self.n}"
+            animation.save(f"AdvancedGreedy_{self.n}"
                            + f"_{self.curr_dist}.gif")
             print(f"Saved as AdvancedGreedy_{self.n}_{self.curr_dist}.gif!")
-            plt.savefig(f"graphs/AdvancedGreedy_{self.n}_{self.curr_dist}.svg")
+            plt.savefig(f"AdvancedGreedy_{self.n}_{self.curr_dist}.svg")
         else:
             plt.show()
         return
