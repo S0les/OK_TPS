@@ -253,7 +253,7 @@ class SimulatedAnnealing(Solver):
         animation = FuncAnimation(plt.gcf(), _animation, frames=frames,
                                   interval=100, cache_frame_data=False,
                                   init_func=self.init_func, repeat=repeat)
-        if fullscreen:
+        if fullscreen and not save:
             manager = plt.get_current_fig_manager()
             manager.full_screen_toggle()
 
@@ -506,7 +506,7 @@ class AdvancedGreedy(Solver):
                                   init_func=self.init_func,
                                   cache_frame_data=False,
                                   frames=frames, repeat=repeat)
-        if fullscreen:
+        if fullscreen and not save:
             manager = plt.get_current_fig_manager()
             manager.full_screen_toggle()
         if save:
