@@ -104,7 +104,7 @@ class Solver(ABC):
                  save: bool = False) -> None:
         """
         Builds the matplotlib.pyplot figure with vizualization
-        solution was achieved for the given algorithm.
+        for the current solution with given algorithm.
 
         @param fullscreen: Toggles whether animation will be shown
         in a fullscreen or not
@@ -270,7 +270,7 @@ class SimulatedAnnealing(Solver):
 
     def get_frames(self) -> list[list[int]]:
         frames = []
-        if not self.history:
+        if len(self.history) < 2:
             return frames
 
         history = copy.deepcopy(self.history)
