@@ -354,7 +354,14 @@ class SimulatedAnnealingV2(SimulatedAnnealing):
             not_in = ((self.nArray[0] - self.nArray[1] + self.n - 1) % self.n)
         return not_in
 
-    def reversecost(self):
+    def reversecost(self) -> float:
+        """
+        Calculates the total cost if given segment will be reversed.
+        In case cost is < 0, then total distance has been shortened
+        and vice versa.
+
+        @return the cost if reverse segment.
+        """
         self.nArray[2] = (self.nArray[0] + self.n - 1) % self.n
         self.nArray[3] = (self.nArray[1] + 1) % self.n
         indexes = [None] * 4
@@ -366,7 +373,11 @@ class SimulatedAnnealingV2(SimulatedAnnealing):
         cost += self.adj[indexes[1]][indexes[2]]
         return cost
 
-    def reverse(self):
+    def reverse(self) -> None:
+        """
+        Reverses given segment in order.
+        """
+
         to_swap = (1 + ((self.nArray[1] - self.nArray[0] + self.n)
                         % self.n))//2
         for i in range(to_swap):
@@ -375,7 +386,14 @@ class SimulatedAnnealingV2(SimulatedAnnealing):
             self.order[k], self.order[j] = self.order[j], self.order[k]
         return
 
-    def transportcost(self):
+    def transportcost(self) -> float:
+        """
+        Calculates the total cost if given segment will be moved in order.
+        In case cost is < 0, then total distance has been shrtened
+        and vice versa.
+
+        @return the cost if segment will be moved.
+        """
         self.nArray[3] = (self.nArray[2] + 1) % self.n
         self.nArray[4] = (self.nArray[0] + self.n - 1) % self.n
         self.nArray[5] = (self.nArray[1] + 1) % self.n
@@ -391,7 +409,10 @@ class SimulatedAnnealingV2(SimulatedAnnealing):
         cost += self.adj[indexes[4]][indexes[5]]
         return cost
 
-    def transport(self):
+    def transport(self) -> None:
+        """
+        Moves given segment in order.
+        """
         neworder = copy.copy(self.order)
         m1 = (self.nArray[1] - self.nArray[0] + self.n) % self.n
         m2 = (self.nArray[4] - self.nArray[3] + self.n) % self.n
@@ -412,7 +433,14 @@ class SimulatedAnnealingV2(SimulatedAnnealing):
         self.order = copy.copy(neworder)
         return
 
-    def metrop(self, cost):
+    def metrop(self, cost: float) -> bool:
+        """
+        Determinates whether the change for the order will be applied.
+
+        @return True if total distance lowers or random number
+        within probability.
+        """
+
         return cost < 0 or uniform(0, 1) < math.exp(-cost/self.temperature)
 
 
@@ -495,6 +523,8 @@ class AdvancedGreedy(Solver):
                          not_visited: list[int]) -> int:
         """
         Get the index of the clossest city for the current one.
+
+        @return index of the closest city
         """
         distance = float('inf')
 
